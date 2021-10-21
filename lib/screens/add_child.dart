@@ -62,171 +62,169 @@ class _AddChilScreenState extends State<AddChilScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            children: <Widget>[
-              const SizedBox(
-                height: 10,
-              ),
-              const Text(
-                'Tell us about your child',
-                style: TextStyle(fontSize: 16, color: Colors.black54),
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              TextfieldWidget(
-                  inputType: TextInputType.text,
-                  onTextChange: (value) {
-                    setState(() {
-                      firstname = value;
-                    });
-                  },
-                  hint: 'Firstname'),
-              TextfieldWidget(
-                  inputType: TextInputType.text,
-                  onTextChange: (value) {
-                    setState(() {
-                      lastname = value;
-                    });
-                  },
-                  hint: 'Lastname'),
-              Row(
-                children: const <Widget>[
-                  Text(
-                    "Gender",
-                    style: TextStyle(
-                      color: AppTheme.PrimaryDarkColor,
-                      fontSize: 13.5,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(
-                height: 5,
-              ),
-              Row(
+      body: GestureDetector(
+        onTap: () {
+          FocusScope.of(context).requestFocus(FocusNode());
+        },
+        child: Container(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
                 children: <Widget>[
-                  FlatButton.icon(
-                    splashColor: Colors.transparent,
-                    label: const Text('Male'),
-                    icon: Radio(
-                      value: 'M',
-                      groupValue: gender,
-                      onChanged: _changeGender,
-                    ),
-                    onPressed: () {
-                      _changeGender('M');
-                    },
+                  const SizedBox(
+                    height: 10,
                   ),
-                  FlatButton.icon(
-                    splashColor: Colors.transparent,
-                    label: const Text("Female"),
-                    icon: Radio(
-                      value: 'F',
-                      groupValue: gender,
-                      onChanged: _changeGender,
-                    ),
-                    onPressed: () {
-                      _changeGender('F');
-                    },
+                  const Text(
+                    'Tell us about your child',
+                    style: TextStyle(fontSize: 16, color: Colors.black54),
                   ),
-                ],
-              ),
-              CustomDateOfBirth(
-                onDateChanged: ({day, month, year}) {
-                  setState(() {
-                    dob = '$day/$month/$year';
-                  });
-                },
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              Row(
-                children: const [
-                  Text(
-                    "Condition(s)",
-                    style: TextStyle(
-                      color: AppTheme.PrimaryDarkColor,
-                      fontSize: 13.5,
-                    ),
+                  const SizedBox(
+                    height: 10,
                   ),
-                ],
-              ),
-              const SizedBox(
-                height: 10,
-              ),
-              childConditions != null
-                  ? ChildConditionWidget(
-                      onselectedConditions: (conditions) {
-                        print(conditions);
-                        // setState(() {
-                        selectedConditions = conditions;
-                        // });
+                  TextfieldWidget(
+                      inputType: TextInputType.text,
+                      onTextChange: (value) {
+                        setState(() {
+                          firstname = value;
+                        });
                       },
-                    )
-                  //_checklistConditions()
-
-                  // ? FlutterMultiChipSelect(
-                  //         key: _multiSelectKey,
-                  //         label: 'Select Conditions',
-                  //         elements: List.generate(
-                  //             childConditions.length,
-                  //             (index) => MultiSelectItem<String>.simple(
-                  //                 title: childConditions[index].name,
-                  //                 value:
-                  //                     childConditions[index].id.toString())),
-                  //         values: [])
-                  : const Align(
-                      alignment: Alignment.center,
-                      child: CircularProgressIndicator(
-                        backgroundColor: AppTheme.PrimaryDarkColor,
+                      hint: 'Firstname'),
+                  TextfieldWidget(
+                      inputType: TextInputType.text,
+                      onTextChange: (value) {
+                        setState(() {
+                          lastname = value;
+                        });
+                      },
+                      hint: 'Lastname'),
+                  Row(
+                    children: const <Widget>[
+                      Text(
+                        "Gender",
+                        style: TextStyle(
+                          color: AppTheme.PrimaryDarkColor,
+                          fontSize: 13.5,
+                        ),
                       ),
-                    ),
-              // const SizedBox(
-              //   height: 15,
-              // ),
-              // MultiSelectDialog(
-              //   onselectedConditions: (conditions) {
-              //     print(conditions);
-              //     selectedConditions = conditions;
-              //   },
-              // ),
-              const SizedBox(
-                height: 15,
+                    ],
+                  ),
+                  const SizedBox(
+                    height: 5,
+                  ),
+                  Row(
+                    children: <Widget>[
+                      FlatButton.icon(
+                        splashColor: Colors.transparent,
+                        label: const Text('Male'),
+                        icon: Radio(
+                          value: 'M',
+                          groupValue: gender,
+                          onChanged: _changeGender,
+                        ),
+                        onPressed: () {
+                          _changeGender('M');
+                        },
+                      ),
+                      FlatButton.icon(
+                        splashColor: Colors.transparent,
+                        label: const Text("Female"),
+                        icon: Radio(
+                          value: 'F',
+                          groupValue: gender,
+                          onChanged: _changeGender,
+                        ),
+                        onPressed: () {
+                          _changeGender('F');
+                        },
+                      ),
+                    ],
+                  ),
+                  CustomDateOfBirth(
+                    onDateChanged: ({day, month, year}) {
+                      setState(() {
+                        dob = '$day/$month/$year';
+                      });
+                    },
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  Row(
+                    children: const [
+                      Text(
+                        "Condition(s)",
+                        style: TextStyle(
+                          color: AppTheme.PrimaryDarkColor,
+                          fontSize: 13.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(
+                    height: 10,
+                  ),
+                  childConditions != null
+                      ? ChildConditionWidget(
+                          onselectedConditions: (conditions) {
+                            // setState(() {
+                            selectedConditions = conditions;
+                            // });
+                          },
+                        )
+                      : const Align(
+                          alignment: Alignment.center,
+                          child: CircularProgressIndicator(
+                            backgroundColor: AppTheme.PrimaryDarkColor,
+                          ),
+                        ),
+                  // const SizedBox(
+                  //   height: 15,
+                  // ),
+                  // MultiSelectDialog(
+                  //   onselectedConditions: (conditions) {
+                  //     print(conditions);
+                  //     selectedConditions = conditions;
+                  //   },
+                  // ),
+                  const SizedBox(
+                    height: 15,
+                  ),
+                  SubmitButtonWidget(onPressed: () {
+                    if (_validateFields()) {
+                      _showPageSubmitting(true);
+                      Repository()
+                          .addChild(
+                        token: widget.userToken,
+                        firstname: firstname,
+                        lastname: lastname,
+                        dob: dob,
+                        gender: gender,
+                        // conditions: this._multiSelectKey.currentState.result,
+                        conditions: selectedConditions,
+                      )
+                          .then((data) {
+                        _showPageSubmitting(false);
+                        AppUtils.showToast("${data['response']}");
+                        if (data['response'] == "Submitted successfully") {
+                          Navigator.pop(context);
+                        }
+                        widget.onChildAdded(Child(
+                            name: "$firstname $lastname",
+                            age: 0,
+                            gender: gender));
+                      }).catchError((onError) {
+                        _showPageSubmitting(false);
+                        AppUtils.showToast('Somethng went wrong');
+                        print('CatchError $onError');
+                      });
+                    } else {
+                      AppUtils.showToast(Constants.HINT_FILL_ALL_FIELDS);
+                    }
+                  })
+                ],
               ),
-              SubmitButtonWidget(onPressed: () {
-                if (_validateFields()) {
-                  _showPageSubmitting(true);
-                  Repository()
-                      .addChild(
-                    token: widget.userToken,
-                    firstname: firstname,
-                    lastname: lastname,
-                    dob: dob,
-                    gender: gender,
-                    // conditions: this._multiSelectKey.currentState.result,
-                    conditions: selectedConditions,
-                  )
-                      .then((data) {
-                    _showPageSubmitting(false);
-                    AppUtils.showToast("${data['response']}");
-                    widget.onChildAdded(Child(
-                        name: "$firstname $lastname", age: 0, gender: gender));
-                    print("Response: $data");
-                  }).catchError((onError) {
-                    _showPageSubmitting(false);
-                    AppUtils.showToast('Somethng went wrong');
-                    print('CatchError $onError');
-                  });
-                } else {
-                  AppUtils.showToast(Constants.HINT_FILL_ALL_FIELDS);
-                }
-              })
-            ],
+            ),
           ),
         ),
       ),
@@ -248,29 +246,6 @@ class _AddChilScreenState extends State<AddChilScreen> {
         gender.isNotEmpty &&
         dob != null &&
         dob.isNotEmpty;
-  }
-
-  Widget _checklistConditions() {
-    return ListView.builder(
-        itemCount: childConditions.length,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemBuilder: (context, index) {
-          return CheckboxListTile(
-              activeColor: AppTheme.PrimaryDarkColor,
-              title: Text(childConditions[index].name),
-              value: selectedConditions.contains(childConditions[index].id),
-              onChanged: (val) {
-                setState(() {
-                  if (selectedConditions.contains(childConditions[index].id)) {
-                    selectedConditions.remove(childConditions[index].id);
-                  } else {
-                    selectedConditions.add(childConditions[index].id);
-                  }
-                });
-                // print(selectedConditions);
-              });
-        });
   }
 
   _showPageSubmitting(bool showLoading) {

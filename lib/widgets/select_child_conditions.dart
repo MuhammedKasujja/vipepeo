@@ -22,7 +22,7 @@ class ChildConditionWidget extends StatelessWidget {
     return MultiFilterSelect(
       hintText: 'Select',
       allItems: items,
-      initValue: const [],
+      initValue: [],
       selectCallback: (selectedValues) {
         onselectedConditions(selectedValues);
         // print(selectedValues);

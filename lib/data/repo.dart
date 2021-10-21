@@ -203,13 +203,7 @@ class Repository {
 
   Future<Map> addChild(
       {token, firstname, lastname, gender, dob, conditions}) async {
-    print("token: $token");
-    print(firstname);
-    print(lastname);
-    print(gender);
-    print(dob);
-    print(conditions);
-    var dio = new Dio();
+    var dio = Dio();
     dio.options.headers.addAll({
       HttpHeaders.authorizationHeader: 'Token $token',
       HttpHeaders.contentTypeHeader: 'application/json'
@@ -316,7 +310,7 @@ class Repository {
     });
     print('Groups: ${res.data}');
     return (res.data['response'] as List)
-        .map((m) => new Community.fromJson(m))
+        .map((m) => Community.fromJson(m))
         .toList();
   }
 
@@ -377,9 +371,8 @@ class Repository {
       print("Catch Error: $onError");
     });
     print(res.data);
-    var listTopics = (res.data['results'] as List)
-        .map((m) => new Topic.fromJson(m))
-        .toList();
+    var listTopics =
+        (res.data['results'] as List).map((m) => Topic.fromJson(m)).toList();
     return listTopics;
   }
 
