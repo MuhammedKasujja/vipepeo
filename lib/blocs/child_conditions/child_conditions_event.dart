@@ -6,3 +6,5 @@ abstract class ChildConditionsEvent extends Equatable {
   @override
   List<Object> get props => [];
 }
+
+class FetchChildConditions extends ChildConditionsEvent {}

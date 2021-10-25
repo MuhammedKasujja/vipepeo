@@ -1,10 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:vipepeo_app/states/app_state.dart';
-import 'package:vipepeo_app/utils/app_theme.dart';
-import 'package:vipepeo_app/utils/app_utils.dart';
-import 'package:vipepeo_app/utils/event_fancy.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
+import 'package:vipepeo_app/utils/utils.dart';
 import 'package:vipepeo_app/widgets/burning_text.dart';
 
 class DrawerWidget extends StatefulWidget {
@@ -17,9 +15,6 @@ class DrawerWidget extends StatefulWidget {
 class _DrawerWidgetState extends State<DrawerWidget> {
   @override
   Widget build(BuildContext context) {
-    var appState = Provider.of<AppState>(
-      context,
-    );
     return Container(
       color: AppTheme.PrimaryColor,
       width: MediaQuery.of(context).size.width - 60,
@@ -28,41 +23,46 @@ class _DrawerWidgetState extends State<DrawerWidget> {
           color: Colors.white,
           child: ListView(
             children: <Widget>[
-              Container(
-                height: 200,
-                decoration: const BoxDecoration(color: AppTheme.PrimaryColor),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: <Widget>[
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(40),
-                            image: DecorationImage(
-                              image: appState.user != null
-                                  ? appState.user.image != null
-                                      ? CachedNetworkImageProvider(
-                                          appState.user.image)
+              BlocBuilder<AuthBloc, AuthState>(
+                builder: (context, state) {
+                  return Container(
+                    height: 200,
+                    decoration:
+                        const BoxDecoration(color: AppTheme.PrimaryColor),
+                    child: Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(40),
+                                image: DecorationImage(
+                                  image: state.data != null
+                                      ? state.data.image != null
+                                          ? CachedNetworkImageProvider(
+                                              state.data.image)
+                                          : const AssetImage(
+                                              'assets/meddie.jpg',
+                                            )
                                       : const AssetImage(
                                           'assets/meddie.jpg',
-                                        )
-                                  : const AssetImage(
-                                      'assets/meddie.jpg',
-                                    ),
-                            )),
+                                        ),
+                                )),
+                          ),
+                          const SizedBox(
+                            height: 15,
+                          ),
+                          Text(state.data != null ? state.data.email : '')
+                        ],
                       ),
-                      const SizedBox(
-                        height: 15,
-                      ),
-                      Text(appState.user != null ? appState.user.email : '')
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                },
               ),
               const Padding(
                 padding: EdgeInsets.all(16.0),
@@ -71,16 +71,23 @@ class _DrawerWidgetState extends State<DrawerWidget> {
                   style: TextStyle(color: Colors.black54, fontSize: 20),
                 ),
               ),
-              _drawerTile('Saved',
-                  page: FancyEvent(),
-                  total: appState.savedEvents != null
-                      ? appState.savedEvents.length
-                      : 0),
-              _drawerTile('Going',
-                  page: const BurningTextWidget(),
-                  total: appState.interestedEvents != null
-                      ? appState.interestedEvents.length
-                      : 0),
+              BlocBuilder<EventsBloc, EventsState>(
+                builder: (context, state) {
+                  return _drawerTile('Saved',
+                      page: const FancyEvent(),
+                      total: state.saved != null ? state.saved.length : 0);
+                },
+              ),
+              BlocBuilder<EventsBloc, EventsState>(
+                builder: (context, state) {
+                  return _drawerTile('Going',
+                      page: const BurningTextWidget(),
+                      total: state.going != null ? state.going.length : 0);
+                  // total: appState.interestedEvents != null
+                  //     ? appState.interestedEvents.length
+                  //     : 0);
+                },
+              ),
               const Divider(),
               _drawerTile('Account Settings'),
               _drawerTile('Notification'),

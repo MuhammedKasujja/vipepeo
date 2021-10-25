@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
 import 'package:vipepeo_app/data/botton_nav_items.dart';
-import 'package:vipepeo_app/screens/events.dart';
-import 'package:vipepeo_app/screens/help.dart';
-import 'package:vipepeo_app/screens/notifications.dart';
-import 'package:vipepeo_app/screens/topicslist.dart';
-import 'package:vipepeo_app/screens/user_profile.dart';
-import 'package:vipepeo_app/states/app_state.dart';
-import 'package:vipepeo_app/utils/app_theme.dart';
-import 'package:vipepeo_app/utils/app_utils.dart';
-import 'package:vipepeo_app/utils/constants.dart';
+import 'package:vipepeo_app/screens/screens.dart';
+import 'package:vipepeo_app/utils/utils.dart';
 import 'package:vipepeo_app/widgets/drawer.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -25,12 +19,11 @@ class _HomeScreenState extends State<HomeScreen>
   int _currentIndex = 0;
   String _profilePhoto;
   String _title = Constants.HOME;
-  AppState appState;
+
   PageController _pageController;
   @override
   void initState() {
-    appState = Provider.of<AppState>(context, listen: false);
-    // print('MyToken: ${appState.userToken}');
+    _loadInitialData();
     _pageController = PageController();
     _pageController.addListener(() {
       var page = _pageController.page.floor();
@@ -94,7 +87,7 @@ class _HomeScreenState extends State<HomeScreen>
                       onPressed: () {
                         AppUtils(context).nextPage(
                             // page: BurningTextWidget()
-                            page: UserProfileScreen());
+                            page: const UserProfileScreen());
                       })
                   : Container(),
               IconButton(
@@ -180,5 +173,16 @@ class _HomeScreenState extends State<HomeScreen>
   void dispose() {
     _pageController.dispose();
     super.dispose();
+  }
+
+  _loadInitialData() {
+    BlocProvider.of<GroupsBloc>(context).add(FetchGroups());
+    // BlocProvider.of<EventsBloc>(context)
+    //     .add(const FetchEvents(EventType.Suggested));
+    // BlocProvider.of<EventsBloc>(context)
+    //     .add(const FetchEvents(EventType.Saved));
+    // BlocProvider.of<EventsBloc>(context)
+    //     .add(const FetchEvents(EventType.Going));
+    BlocProvider.of<ChildConditionsBloc>(context).add(FetchChildConditions());
   }
 }

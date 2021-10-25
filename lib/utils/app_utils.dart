@@ -31,7 +31,7 @@ class AppUtils {
 
   static showToast(String message) {
     Fluttertoast.showToast(
-        msg: '$message',
+        msg: message,
         gravity: ToastGravity.TOP,
         backgroundColor: AppTheme.PrimaryDarkColor);
   }

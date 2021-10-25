@@ -1,13 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:vipepeo_app/data/repo.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
 import 'package:vipepeo_app/models/models.dart';
-import 'package:vipepeo_app/states/app_state.dart';
-import 'package:vipepeo_app/utils/app_utils.dart';
-import 'package:vipepeo_app/utils/constants.dart';
-import 'package:vipepeo_app/widgets/description_textfield.dart';
-import 'package:vipepeo_app/widgets/submit_button.dart';
-import 'package:vipepeo_app/widgets/textfield.dart';
+import 'package:vipepeo_app/utils/utils.dart';
 import 'package:vipepeo_app/widgets/widgets.dart';
 
 class AddTopicScreen extends StatefulWidget {
@@ -22,21 +17,11 @@ class _AddTopicScreenState extends State<AddTopicScreen> {
   List<ChildCondition> childConditions;
   String title, _desc;
   List selectedConditions = [];
-  AppState appState;
   @override
   void initState() {
-    appState = Provider.of<AppState>(context, listen: false);
-    if (appState.childConditions != null) {
-      childConditions = appState.childConditions;
-    } else {
-      appState.getChildConditionsList().then((data) {
-        // print("Conditions: $data");
-        if (mounted) {
-          setState(() {
-            childConditions = data;
-          });
-        }
-      });
+    final _childConditionsBloc = BlocProvider.of<ChildConditionsBloc>(context);
+    if (_childConditionsBloc.state.data == null) {
+      _childConditionsBloc.add(FetchChildConditions());
     }
     super.initState();
   }
@@ -81,18 +66,20 @@ class _AddTopicScreenState extends State<AddTopicScreen> {
               const SizedBox(
                 height: 10,
               ),
-              SubmitButtonWidget(onPressed: () {
-                Repository()
-                    .addTopic(
-                        token: appState.userToken,
-                        title: title,
-                        desc: _desc,
-                        conditions: selectedConditions)
-                    .then((data) {
-                  AppUtils.showToast(data[Constants.KEY_RESPONSE]);
-                  appState.fetchNotifications();
-                });
-              }),
+              BlocListener<TopicsBloc, TopicsState>(
+                listener: (context, state) {
+                  if (state.status == AppStatus.failure) {
+                    AppUtils.showToast(state.error);
+                  }
+                  if (state.status == AppStatus.loaded) {
+                    AppUtils.showToast(state.message);
+                  }
+                },
+                child: SubmitButtonWidget(onPressed: () {
+                  BlocProvider.of<TopicsBloc>(context)
+                      .add(AddTopic(title, _desc, selectedConditions));
+                }),
+              ),
             ],
           ),
         ),

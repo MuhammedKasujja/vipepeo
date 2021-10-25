@@ -6,6 +6,7 @@ class User {
   final String country;
   final String email;
   final String city;
+  final String token;
   final List<Child> children;
 
   User(
@@ -14,6 +15,7 @@ class User {
       this.name,
       this.country,
       this.email,
+      this.token,
       this.children});
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -23,17 +25,16 @@ class User {
         country: userdata['country'],
         name: userdata['name'],
         city: userdata['city'],
-        children: (json['children'] as List)
-            .map((m) => new Child.fromJson(m))
-            .toList());
+        children:
+            (json['children'] as List).map((m) => Child.fromJson(m)).toList());
   }
 
   Map toMap() {
     var map = {
-      'email': this.email,
-      'country': this.country,
-      'name': this.name,
-      'image': this.image
+      'email': email,
+      'country': country,
+      'name': name,
+      'image': image
     };
     return map;
   }

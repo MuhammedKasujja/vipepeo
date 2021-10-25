@@ -1,18 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:vipepeo_app/data/repo.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
+import 'package:vipepeo_app/models/models.dart';
 import 'package:vipepeo_app/screens/home.dart';
 import 'package:vipepeo_app/screens/register.dart';
-import 'package:vipepeo_app/states/app_state.dart';
-import 'package:vipepeo_app/utils/app_theme.dart';
-import 'package:vipepeo_app/utils/app_utils.dart';
-import 'package:vipepeo_app/utils/constants.dart';
-import 'package:vipepeo_app/widgets/loading.dart';
-import 'package:vipepeo_app/widgets/other_option.dart';
-import 'package:vipepeo_app/widgets/submit_button.dart';
-import 'package:vipepeo_app/widgets/textfield.dart';
+import 'package:vipepeo_app/utils/utils.dart';
+import 'package:vipepeo_app/widgets/widgets.dart';
 
 class LoginScreen extends StatefulWidget {
+  const LoginScreen({Key key}) : super(key: key);
+
   @override
   _LoginScreenState createState() => _LoginScreenState();
 }
@@ -92,13 +89,34 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(
                     height: 10,
                   ),
-                  SubmitButtonWidget(onPressed: () {
-                    if (_validateFields()) {
-                      _login();
-                    } else {
-                      AppUtils.showToast(Constants.HINT_FILL_ALL_FIELDS);
-                    }
-                  }),
+                  BlocConsumer<AuthBloc, AuthState>(
+                    listener: (context, state) {
+                      if (state.status == AppStatus.loaded) {
+                        AppUtils.showToast(state.message);
+                        if (state.success) {
+                          Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const HomeScreen()));
+                        }
+                      }
+                      if (state.status == AppStatus.failure) {
+                        if (state.error != null) {
+                          AppUtils.showToast(state.error);
+                        }
+                      }
+                    },
+                    builder: (context, state) {
+                      return SubmitButtonWidget(onPressed: () {
+                        if (_validateFields()) {
+                          BlocProvider.of<AuthBloc>(context)
+                              .add(Login(email, password));
+                        } else {
+                          AppUtils.showToast(Constants.HINT_FILL_ALL_FIELDS);
+                        }
+                      });
+                    },
+                  ),
                   const ORWidget(),
                   OutlineButton(
                     borderSide: const BorderSide(color: AppTheme.PrimaryColor),
@@ -111,9 +129,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) {
-                        return RegisterScreen();
-                      }));
+                      BlocProvider.of<GroupsBloc>(context).add(FetchGroups());
+                      // Navigator.push(context, MaterialPageRoute(builder: (_) {
+                      //   return const RegisterScreen();
+                      // }));
                     },
                   )
                 ],
@@ -130,40 +149,5 @@ class _LoginScreenState extends State<LoginScreen> {
         email.isNotEmpty &&
         password != null &&
         password.isNotEmpty;
-  }
-
-  _login() {
-    _pageSubmitting(true);
-    Repository().login(password: password, email: email).then((data) {
-      if (data['code'] == 0) {
-        print(data['response']);
-        AppUtils.showToast(data[Constants.KEY_RESPONSE]);
-      } else {
-        AppUtils.showToast(data[Constants.KEY_RESPONSE]);
-        Repository().savePrefs(data['token'], email).then((value) {
-          var appState = Provider.of<AppState>(context, listen: false);
-          appState.loadPrefs().then((prefs) {
-            print('UserToken: ${prefs[Constants.USER_TOKEN]}');
-            if (prefs[Constants.USER_TOKEN] != null) {
-              appState.getUserData();
-              appState.loadInitialData();
-              Navigator.pushReplacement(context,
-                  MaterialPageRoute(builder: (context) => const HomeScreen()));
-            }
-          });
-        });
-      }
-      _pageSubmitting(false);
-      print('ResponseCode: $data');
-    }).catchError((onError) {
-      AppUtils.showToast(Constants.NETWORK_ERROR);
-      _pageSubmitting(false);
-    });
-  }
-
-  _pageSubmitting(bool showLoading) {
-    setState(() {
-      isSubmitting = showLoading;
-    });
   }
 }

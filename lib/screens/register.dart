@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:vipepeo_app/data/repo.dart';
-import 'package:vipepeo_app/utils/app_utils.dart';
-import 'package:vipepeo_app/utils/constants.dart';
-import 'package:vipepeo_app/widgets/country_dropdown.dart';
-import 'package:vipepeo_app/widgets/submit_button.dart';
-import 'package:vipepeo_app/widgets/textfield.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
+import 'package:vipepeo_app/models/models.dart';
+import 'package:vipepeo_app/utils/utils.dart';
+import 'package:vipepeo_app/widgets/widgets.dart';
+
+import 'home.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key key}) : super(key: key);
@@ -15,7 +16,6 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   String name, email, password, confirmPassword, _country = "UG", _city;
-  bool isSubmitting = false;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -23,11 +23,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
           title: const Text(Constants.REGISTER),
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(3),
-            child: Container(
-              width: double.infinity,
-              child:
-                  isSubmitting ? const LinearProgressIndicator() : Container(),
-              color: Colors.black,
+            child: BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, state) {
+                return Container(
+                  width: double.infinity,
+                  child: state.status == AppStatus.loading
+                      ? const LinearProgressIndicator()
+                      : Container(),
+                  color: Colors.black,
+                );
+              },
             ),
           ),
         ),
@@ -94,17 +99,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     });
                   },
                 ),
-                SubmitButtonWidget(onPressed: () {
-                  if (_validateFields()) {
-                    if (_validatePassword()) {
-                      _registerUser();
-                    } else {
-                      AppUtils.showToast("Passwords do not match");
+                BlocListener<AuthBloc, AuthState>(
+                  listener: (context, state) {
+                    if (state.status == AppStatus.loaded) {
+                      AppUtils.showToast(state.message);
+                      if (state.success) {
+                        Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                                builder: (context) => const HomeScreen()));
+                      }
                     }
-                  } else {
-                    AppUtils.showToast(Constants.HINT_FILL_ALL_FIELDS);
-                  }
-                }),
+                    if (state.status == AppStatus.failure) {
+                      if (state.error != null) {
+                        AppUtils.showToast(state.error);
+                      }
+                    }
+                  },
+                  child: SubmitButtonWidget(onPressed: _registerUser),
+                ),
                 // ORWidget(),
                 // OutlineButton(
                 //   highlightedBorderColor: AppTheme.PrimaryDarkColor,
@@ -136,37 +149,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   _registerUser() {
-    _pageSubmitting(true);
-    Repository()
-        .register(
+    if (_validateFields()) {
+      if (_validatePassword()) {
+        BlocProvider.of<AuthBloc>(context).add(Register(
             name: name,
             password: password,
             email: email,
             country: _country,
-            city: _city)
-        .then((data) {
-      if (data[Constants.KEY_CODE] == 0) {
-        AppUtils.showToast(data[Constants.KEY_ERROR]);
-        print(data[Constants.KEY_ERROR]);
+            city: _city));
       } else {
-        AppUtils.showToast(data[Constants.KEY_RESPONSE]);
-        print(data[Constants.KEY_RESPONSE]);
+        AppUtils.showToast("Passwords do not match");
       }
-      _pageSubmitting(false);
-    }).catchError((onError) {
-      AppUtils.showToast(Constants.NETWORK_ERROR);
-      print(onError);
-      _pageSubmitting(false);
-    });
+    } else {
+      AppUtils.showToast(Constants.HINT_FILL_ALL_FIELDS);
+    }
   }
 
   bool _validatePassword() {
     return password == confirmPassword;
-  }
-
-  _pageSubmitting(bool showLoading) {
-    setState(() {
-      isSubmitting = showLoading;
-    });
   }
 }

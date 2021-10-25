@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
 import 'package:vipepeo_app/models/models.dart';
-import 'package:vipepeo_app/states/app_state.dart';
-import 'package:vipepeo_app/widgets/textfield.with.controller.dart';
-import 'package:vipepeo_app/utils/app_theme.dart';
-import 'package:vipepeo_app/widgets/comment_textfield.dart';
-import 'package:vipepeo_app/widgets/loading.dart';
+import 'package:vipepeo_app/utils/utils.dart';
+import 'package:vipepeo_app/widgets/widgets.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 class QuestionDetailsScreen extends StatefulWidget {
@@ -20,8 +18,7 @@ class QuestionDetailsScreen extends StatefulWidget {
 
 class _QuestionDetailsScreenState extends State<QuestionDetailsScreen> {
   final _controller = TextEditingController();
-  AppState _appState;
-  List<Answer> listAnswers;
+
   int totalAnswers;
   bool isSubmitting = false;
 
@@ -29,12 +26,8 @@ class _QuestionDetailsScreenState extends State<QuestionDetailsScreen> {
   void initState() {
     super.initState();
     totalAnswers = widget.question.totalAnswers;
-    _appState = Provider.of<AppState>(context, listen: false);
-    _appState.fetchQuestionAnswers(widget.question.id).then((data) {
-      setState(() {
-        listAnswers = data;
-      });
-    });
+    BlocProvider.of<QuestionAnswersBloc>(context)
+        .add(FetchQuestionAnswers(widget.question.id));
   }
 
   @override
@@ -44,10 +37,16 @@ class _QuestionDetailsScreenState extends State<QuestionDetailsScreen> {
         title: const Text('Question Details'),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3),
-          child: Container(
-            width: double.infinity,
-            child: isSubmitting ? const LinearProgressIndicator() : Container(),
-            color: Colors.black,
+          child: BlocBuilder<QuestionAnswersBloc, QuestionAnswersState>(
+            builder: (context, state) {
+              return Container(
+                width: double.infinity,
+                child: state.status == AppStatus.loading
+                    ? const LinearProgressIndicator()
+                    : Container(),
+                color: Colors.black,
+              );
+            },
           ),
         ),
       ),
@@ -79,14 +78,15 @@ class _QuestionDetailsScreenState extends State<QuestionDetailsScreen> {
               ),
             ),
             const Divider(),
-            listAnswers == null
-                ? const LoadingWidget()
-                : ListView.builder(
+            BlocBuilder<QuestionAnswersBloc, QuestionAnswersState>(
+              builder: (context, state) {
+                if (state.data != null) {
+                  return ListView.builder(
                     shrinkWrap: true,
-                    itemCount: listAnswers.length,
+                    itemCount: state.data.length,
                     // physics: NeverScrollingPhysics(),
                     itemBuilder: (context, index) {
-                      var answer = listAnswers[index];
+                      var answer = state.data[index];
                       return ListTile(
                         key: Key('${answer.id}'),
                         subtitle: Text(answer.answeredBy),
@@ -104,35 +104,11 @@ class _QuestionDetailsScreenState extends State<QuestionDetailsScreen> {
                                 //     AppTheme.PrimaryAssentColor, BlendMode.colorBurn)
                               )),
                         ),
-                        trailing: InkWell(
-                          child: Column(
-                            children: [
-                              Container(
-                                  decoration:
-                                      BoxDecoration(color: Colors.green[100]),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 4.0, horizontal: 6.0),
-                                    child: Text('${answer.approvals}'),
-                                  )),
-                              const SizedBox(
-                                height: 2,
-                              ),
-                              const Text.rich(
-                                TextSpan(
-                                    text: 'Approve',
-                                    // recognizer: new TapGestureRecognizer()
-                                    //   ..onTap = () {},
-                                    style: TextStyle(
-                                        decoration: TextDecoration.underline,
-                                        letterSpacing: 1.5,
-                                        color: Colors.blue)),
-                              )
-                            ],
-                          ),
-                          onTap: () {
-                            _appState.approveAnswer(answer.id).then((value) {
-                              if (value['approved']) {
+                        trailing: BlocListener<QuestionAnswersBloc,
+                            QuestionAnswersState>(
+                          listener: (context, state) {
+                            if (state.status == AppStatus.loaded) {
+                              if (state.message == "approved") {
                                 setState(() {
                                   answer.approvals++;
                                 });
@@ -141,36 +117,82 @@ class _QuestionDetailsScreenState extends State<QuestionDetailsScreen> {
                                   answer.approvals--;
                                 });
                               }
-                              print(value);
-                            });
+                            }
+                            if (state.status == AppStatus.failure) {
+                              AppUtils.showToast(state.error);
+                            }
                           },
+                          child: InkWell(
+                            child: Column(
+                              children: [
+                                Container(
+                                    decoration:
+                                        BoxDecoration(color: Colors.green[100]),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 4.0, horizontal: 6.0),
+                                      child: Text('${answer.approvals}'),
+                                    )),
+                                const SizedBox(
+                                  height: 2,
+                                ),
+                                const Text.rich(
+                                  TextSpan(
+                                      text: 'Approve',
+                                      // recognizer: new TapGestureRecognizer()
+                                      //   ..onTap = () {},
+                                      style: TextStyle(
+                                          decoration: TextDecoration.underline,
+                                          letterSpacing: 1.5,
+                                          color: Colors.blue)),
+                                )
+                              ],
+                            ),
+                            onTap: () {
+                              BlocProvider.of<QuestionAnswersBloc>(context)
+                                  .add(ApproveAnswer(answer.id));
+                            },
+                          ),
                         ),
                       );
                     },
-                  )
+                  );
+                }
+                if (state.status == AppStatus.loading) {
+                  const LoadingWidget();
+                }
+                return Container();
+              },
+            )
           ],
         ),
       ),
       // floatingActionButton: BottomSheet(),
-      bottomSheet: CommentWidget(
-        onSendClicked: (val) {
-          _showLoading(true);
-          _appState.answerQuestion(val, widget.question.id).then((value) {
-            print(value);
-            _appState.fetchQuestionAnswers(widget.question.id).then((data) {
+      bottomSheet: BlocListener<QuestionAnswersBloc, QuestionAnswersState>(
+        listener: (context, state) {
+          if (state.status == AppStatus.loading) {
+            _showLoading(true);
+          }
+          if (state.status == AppStatus.loaded && isSubmitting) {
+            if (state.success) {
               setState(() {
-                listAnswers = data;
+                totalAnswers++;
               });
-            });
-            widget.onReply(widget.question);
-            setState(() {
-              totalAnswers++;
-            });
-            _showLoading(false);
-          }).catchError((onError) {
-            _showLoading(false);
-          });
+              BlocProvider.of<QuestionAnswersBloc>(context)
+                  .add(FetchQuestionAnswers(widget.question.id));
+            }
+          }
+          if (state.status == AppStatus.failure) {
+            AppUtils.showToast(state.error);
+          }
+          _showLoading(false);
         },
+        child: CommentWidget(
+          onSendClicked: (val) {
+            BlocProvider.of<QuestionAnswersBloc>(context)
+                .add(AnswerQuestion(widget.question.id, val));
+          },
+        ),
       ),
       // FloatingActionButton.extended(
       //   onPressed: () {

@@ -13,17 +13,17 @@ import 'package:dio/dio.dart';
 import 'package:http_parser/http_parser.dart';
 
 class Repository {
-  Dio dio;
+  Dio dio = Dio();
   Repository({token}) {
     if (token != null) {
-      dio = Dio();
       dio.options.headers.addAll({
         HttpHeaders.authorizationHeader: 'Token $token',
         HttpHeaders.contentTypeHeader: 'application/json'
       });
     }
   }
-  Future<Map> register({name, email, password, country, city}) async {
+  Future<SingleResponse> register(
+      {name, email, password, country, city}) async {
     var res = await http.post(Uri.parse(Urls.REGISTER), body: {
       "email": email,
       "password1": password,
@@ -35,32 +35,39 @@ class Repository {
       print("$onError");
     });
     var data = json.decode(res.body);
-    print(data);
-    return data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
   }
 
-  Future<Map> login({email, password}) async {
+  Future<SingleResponse<User>> login({email, password}) async {
     var res = await http.post(Uri.parse(Urls.LOGIN), body: {
       "email": email,
       "password": password,
-    }).catchError((onError) {
-      print("$onError");
     });
     var data = json.decode(res.body);
-    // _savePrefs(data['token']);
-    print(data);
-    //var map
-    return data;
+
+    if (data['code'] == 0) {
+      return SingleResponse<User>(success: false, message: data['response']);
+    }
+
+    await savePrefs(data['token'], email);
+    try {
+      var user = await getUserProfile(token: data['token']);
+      return SingleResponse<User>(
+          success: true, message: data['response'], data: user);
+    } catch (error) {
+      return SingleResponse<User>(success: false, error: error.toString());
+    }
   }
 
-  Future<Map<String, dynamic>> loadPrefs() async {
+  Future<User> loadPrefs() async {
     var prefs = await SharedPreferences.getInstance();
-    Map<String, dynamic> map = {
-      Constants.USER_TOKEN: prefs.getString(Constants.USER_TOKEN),
-      Constants.KEY_EMAIL: prefs.getString(Constants.KEY_EMAIL),
-      Constants.KEY_PROFILE_PHOTO: prefs.getString(Constants.KEY_PROFILE_PHOTO),
-    };
-    return map;
+    final user = User(
+      token: prefs.getString(Constants.USER_TOKEN),
+      email: prefs.getString(Constants.KEY_EMAIL),
+    );
+    return user;
   }
 
   Future logout() async {
@@ -79,7 +86,9 @@ class Repository {
     return prefs.setString(Constants.KEY_PROFILE_PHOTO, photoUrl);
   }
 
-  Future changePassword({token, oldPassword, newPassword}) async {
+  Future<SingleResponse> changePassword({oldPassword, newPassword}) async {
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
     var res = await http.put(Uri.parse(Urls.CHANGE_PASSWORD), headers: {
       HttpHeaders.authorizationHeader: 'Token $token'
     }, body: {
@@ -88,21 +97,33 @@ class Repository {
       'new_password2': newPassword
     });
 
-    return json.decode(res.body);
+    var data = json.decode(res.body);
+
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
   }
 
-  Future<User> getUserProfile() async {
+  Future<User> getUserProfile({token}) async {
+    dio = Dio();
+    if (token == null) {
+      var prefs = await SharedPreferences.getInstance();
+      token = prefs.getString(Constants.USER_TOKEN);
+    }
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
+    });
     var res = await dio.get(Urls.USER_PROFILE);
-    //  print('Profile: ${res.data}');
+    // print(res.data);
     var user = User.fromJson(res.data);
-    print(user.email);
-    print(user.children.length);
+
     return user;
   }
 
   //////////////////////////////////Starting////////////////////////
 
-  Future<Map> addProfession({token, prof, desc, spec}) async {
+  Future<SingleResponse> addProfession({token, prof, desc, spec}) async {
     var dio = Dio();
     dio.options.headers.addAll({
       HttpHeaders.authorizationHeader: 'Token $token',
@@ -113,20 +134,30 @@ class Repository {
       'any_info': desc,
       'spec': [1, 2]
     });
-    return res.data;
+    var data = res.data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
   }
 
-  Future<Map> approveAnswer(answerID) async {
+  Future<SingleResponse> approveAnswer(answerID) async {
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
+    });
     var res = await dio.get(Urls.APPROVE_ANSWER + "/$answerID/");
-    return res.data;
+    var data = res.data;
+    return SingleResponse(
+        success: data['response'] == "approved", message: data['response']);
   }
 
-  Future<Map> addEditEvent(
+  Future<SingleResponse> addEditEvent(
       {Event event, PostData postType = PostData.Save, eventId}) async {
-    print(event.photo);
-    print("EventID: $eventId");
+    // print(event.photo);
     // print('Map: ${event.toMap()}');
-    var res;
+    Response res;
     var formData = FormData.fromMap({
       'theme': event.theme,
       "start_date": event.startDate,
@@ -141,8 +172,12 @@ class Repository {
       "photo": await _createMultipartFile(event.photo),
     });
     if (postType == PostData.Update) {
-      // var url = Urls.EDIT_MEETUP + "/$eventId/";
-      // print(url);
+      var prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(Constants.USER_TOKEN);
+      dio.options.headers.addAll({
+        HttpHeaders.authorizationHeader: 'Token $token',
+        HttpHeaders.contentTypeHeader: 'application/json'
+      });
       res = await dio
           .put(Urls.EDIT_MEETUP + "/$eventId/", data: formData)
           .catchError((onError) {
@@ -155,11 +190,13 @@ class Repository {
         print(onError);
       });
     }
-    // print(res.data);
-    return res.data;
+    var data = res.data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
   }
 
-  Future<Map> addEditCommunity(
+  Future<SingleResponse> addEditCommunity(
       {Community community,
       PostData postType = PostData.Save,
       communityId}) async {
@@ -173,7 +210,13 @@ class Repository {
       'location_country': community.country,
       'photo': await _createMultipartFile(community.image),
     });
-    var res;
+    Response res;
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
+    });
     if (postType == PostData.Update) {
       res =
           await dio.put(Urls.EDIT_COMMUNITY + "/$communityId/", data: formData);
@@ -181,11 +224,15 @@ class Repository {
       res = await dio.post(Urls.ADD_COMMUNITY, data: formData);
     }
 
-    return res.data;
+    var data = res.data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
   }
 
-  Future<Map> addTopic({token, title, desc, conditions}) async {
-    var dio = Dio();
+  Future<SingleResponse> addTopic({title, desc, conditions}) async {
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
     dio.options.headers.addAll({
       HttpHeaders.authorizationHeader: 'Token $token',
       HttpHeaders.contentTypeHeader: 'application/json'
@@ -194,16 +241,17 @@ class Repository {
       "title": title,
       'details': desc,
       'condition': conditions,
-    }).catchError((onError) {
-      print(onError);
     });
-
-    return res.data;
+    var data = res.data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
   }
 
-  Future<Map> addChild(
-      {token, firstname, lastname, gender, dob, conditions}) async {
-    var dio = Dio();
+  Future<SingleResponse> addChild(
+      {firstname, lastname, gender, dob, conditions}) async {
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
     dio.options.headers.addAll({
       HttpHeaders.authorizationHeader: 'Token $token',
       HttpHeaders.contentTypeHeader: 'application/json'
@@ -213,29 +261,41 @@ class Repository {
       "gender": gender,
       "dob": "2019-06-23",
       "condition": conditions
-    }).catchError((onError) {
-      print('Catch error: $onError');
     });
     // Response is returned as a Map
     var data = res.data;
-    print(data);
-    return data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
   }
 
-  Future<Map> updateProfile({name, email, String filePath}) async {
+  Future<SingleResponse> updateProfile({name, email, String filePath}) async {
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
+    });
     var formData = FormData.fromMap({
       // "name": name,
       // "email": email,
       "photo": await _createMultipartFile(filePath),
     });
-    var res =
-        await dio.put(Urls.PHOTO_UPDATE, data: formData).catchError((onError) {
-      print("Catch Error: $onError");
-    });
-    return res.data;
+    var res = await dio.put(Urls.PHOTO_UPDATE, data: formData);
+    var data = res.data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
   }
 
-  Future<Map> askQuestion({question, List topics}) async {
+  Future<SingleResponse> askQuestion(question, List topics) async {
+    print({'Topics': topics});
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
+    });
     var formData = FormData.fromMap({
       "quest": question,
       "topics": topics,
@@ -245,10 +305,19 @@ class Repository {
       print("Catch Error: $onError");
     });
     print(res.data);
-    return res.data;
+    var data = res.data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
   }
 
   Future<List<Question>> fetchQuestions() async {
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
+    });
     var res = await dio
         .get(
       Urls.QUESTIONS,
@@ -263,16 +332,30 @@ class Repository {
     return listQuestions;
   }
 
-  Future<Map> answerQuestion({answer, questioID}) async {
+  Future<SingleResponse> answerQuestion({answer, questioID}) async {
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
+    });
     var res = await dio.post(Urls.QUESTION_ANSWER + "/$questioID/",
         data: {'text': answer}).catchError((onError) {
       print("Catch Error: $onError");
     });
-    print(res.data);
-    return res.data;
+    var data = res.data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
   }
 
   Future<List<Answer>> fetchQuestionAnswers(questioID) async {
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
+    });
     var res = await dio
         .get(
       Urls.QUESTION_ANSWER + "/$questioID/",
@@ -288,10 +371,16 @@ class Repository {
   }
 
   Future<List<Event>> getMyMeetups(EventType eventType) async {
-    var url;
+    String url;
     if (eventType == EventType.Going) url = Urls.MY_MEETUPS;
     if (eventType == EventType.Saved) url = Urls.SAVED_MEETUPS;
     if (eventType == EventType.Suggested) url = Urls.SUGGESTED_MEETUPS;
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
+    });
     var res = await dio.get(url).catchError((onError) {
       print("Catch Error: $onError");
     });
@@ -304,10 +393,13 @@ class Repository {
   }
 
   Future<List<Community>> getMyGroups() async {
-    var res = await dio.get(Urls.MY_GROUPS).catchError((onError) {
-      print("GroupsError: $onError");
-      print("Catch Error: $onError");
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
     });
+    var res = await dio.get(Urls.MY_GROUPS);
     print('Groups: ${res.data}');
     return (res.data['response'] as List)
         .map((m) => Community.fromJson(m))
@@ -315,22 +407,27 @@ class Repository {
   }
 
   Future<List<ChildCondition>> getChildConditions() async {
-    var res = await dio.get(Urls.CHILD_CONDITIONS).catchError((onError) {
-      print("Catch Error: $onError");
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
     });
+    var res = await dio.get(Urls.CHILD_CONDITIONS);
     var conditions = (res.data['response'] as List)
         .map((m) => ChildCondition.fromJson(m))
         .toList();
-    print("Total: ${conditions.length}");
     return conditions;
   }
 
   Future<List<EventComment>> groupComment(groupId) async {
-    var res = await dio
-        .get(Urls.LIST_GROUP_COMMENTS + "/$groupId/")
-        .catchError((onError) {
-      print("Catch Error: $onError");
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
     });
+    var res = await dio.get(Urls.LIST_GROUP_COMMENTS + "/$groupId/");
     var comments = (res.data['comments'] as List)
         .map((m) => EventComment.fromJson(m))
         .toList();
@@ -338,39 +435,77 @@ class Repository {
   }
 
   Future<List<EventComment>> eventComment(eventId) async {
-    var url = Urls.LIST_MEETUP_COMMENTS + "/$eventId/";
-    var res = await dio.get(url).catchError((onError) {
-      print("Catch Error: $onError");
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
     });
+    var url = Urls.LIST_MEETUP_COMMENTS + "/$eventId/";
+    var res = await dio.get(url);
     var comments = (res.data['comments'] as List)
         .map((m) => EventComment.fromJson(m))
         .toList();
     return comments;
   }
 
-  Future<Map> makeEventComment(eventId, text) async {
-    var url = Urls.LIST_MEETUP_COMMENTS + "/$eventId/";
-    var res = await dio.post(url, data: {'text': text}).catchError((onError) {
-      print("Catch Error: $onError");
+  Future<List<EventComment>> fetchComments(eventId, CommentType type) async {
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
     });
-    // print(res.data);
-    return res.data;
+    var url = type == CommentType.event
+        ? Urls.LIST_MEETUP_COMMENTS
+        : Urls.LIST_GROUP_COMMENTS;
+    url = url + "/$eventId/";
+    var res = await dio.get(url);
+    var comments = (res.data['comments'] as List)
+        .map((m) => EventComment.fromJson(m))
+        .toList();
+    return comments;
   }
 
-  Future<Map> makeGroupComment(groupId, text) async {
-    var url = Urls.LIST_GROUP_COMMENTS + "/$groupId/";
-    var res = await dio.post(url, data: {'text': text}).catchError((onError) {
-      print("Catch Error: $onError");
+  Future<SingleResponse> makeEventComment(eventId, text) async {
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
     });
+    var url = Urls.LIST_MEETUP_COMMENTS + "/$eventId/";
+    var res = await dio.post(url, data: {'text': text});
     // print(res.data);
-    return res.data;
+    var data = res.data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
+  }
+
+  Future<SingleResponse> makeGroupComment(groupId, text) async {
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
+    });
+    final url = Urls.LIST_GROUP_COMMENTS + "/$groupId/";
+    var res = await dio.post(url, data: {'text': text});
+    var data = res.data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
   }
 
   Future<List<Topic>> fetchTopics() async {
-    var res = await dio.get(Urls.MY_TOPICS).catchError((onError) {
-      print("Catch Error: $onError");
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
     });
-    print(res.data);
+    var res = await dio.get(Urls.MY_TOPICS);
     var listTopics =
         (res.data['results'] as List).map((m) => Topic.fromJson(m)).toList();
     return listTopics;
@@ -380,45 +515,104 @@ class Repository {
     var fileName = filePath.split('/').last;
     var ext = fileName.split(".")[1];
     var futureFile = await MultipartFile.fromFile(filePath,
-        filename: fileName, contentType: MediaType('image', '$ext'));
+        filename: fileName, contentType: MediaType('image', ext));
     return futureFile;
   }
 
-  Future<Map> attendOrDontAttendEvent(eventId) async {
+  Future<SingleResponse> attendOrDontAttendEvent(eventId) async {
     var url = Urls.ATTEND_DONT_ATTEND_MEETUP + "/$eventId/";
-    var res = await dio
-        .get(
-      url,
-    )
-        .catchError((onError) {
-      print("Catch Error: $onError");
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
     });
-    print(res.data);
-    return res.data;
+    var res = await dio.get(
+      url,
+    );
+    var data = res.data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
   }
 
-  Future<Map> saveRemoveEvent(eventId) async {
+  Future<SingleResponse> saveRemoveEvent(eventId) async {
     var url = Urls.SAVE_REMOVE_MEETUP + "/$eventId/";
-    var res = await dio
-        .get(
-      url,
-    )
-        .catchError((onError) {
-      print("Catch Error: $onError");
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
     });
-    print(res.data);
-    return res.data;
+    var res = await dio.get(
+      url,
+    );
+    var data = res.data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
   }
 
-  Future<Map> joinOrLeaveGroup(groupId) async {
+  Future<SingleResponse> joinOrLeaveGroup(groupId) async {
     var url = Urls.JOIN_LEAVE_GROUP + "/$groupId/";
-    var res = await dio
-        .get(
-      url,
-    )
-        .catchError((onError) {
-      print("Catch Error: $onError");
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
     });
-    return res.data;
+    var res = await dio.get(url);
+    var data = res.data;
+    return SingleResponse(
+        success: data['response'] == "Submitted successfully",
+        message: data['response']);
+  }
+
+  Future<Dio> _getHost() async {
+    dio ??= Dio();
+    var prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString(Constants.USER_TOKEN);
+    dio.options.headers.addAll({
+      HttpHeaders.authorizationHeader: 'Token $token',
+      HttpHeaders.contentTypeHeader: 'application/json'
+    });
+    return dio;
+  }
+
+  Future<List<NotificationModel>> fetchNotifications() async {
+    var data = await Future.delayed(const Duration(seconds: 6), () {
+      var notEvent = NotificationModel(
+          id: 34,
+          time: '8',
+          date: '22/08/2020',
+          sender: 'Ayyego',
+          sourceType: 'event',
+          source: 'Child Abuse',
+          message:
+              'This should not be done to any child because of their gender either');
+      var notGroup = NotificationModel(
+          id: 34,
+          time: '3',
+          date: '22/08/2020',
+          sender: 'Muhammed',
+          sourceType: 'group',
+          source: 'Iwe',
+          message: 'this is awesome but do u fee the same');
+
+      var notifications = [
+        notEvent,
+        notGroup,
+        notEvent,
+        notEvent,
+        notGroup,
+        notEvent,
+        notGroup,
+        notEvent
+      ];
+
+      return notifications;
+    });
+
+    return data;
   }
 }

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
 import 'package:vipepeo_app/models/models.dart';
 import 'package:vipepeo_app/screens/add_topic.dart';
-import 'package:vipepeo_app/states/app_state.dart';
 import 'package:vipepeo_app/utils/app_theme.dart';
 import 'package:vipepeo_app/utils/app_utils.dart';
 import 'package:vipepeo_app/widgets/event_loading.dart';
@@ -17,10 +17,13 @@ class TopicsListScreen extends StatefulWidget {
 
 class _TopicsListScreenState extends State<TopicsListScreen> {
   @override
+  void initState() {
+    BlocProvider.of<TopicsBloc>(context).add(FetchTopics());
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    var appState = Provider.of<AppState>(
-      context,
-    );
     return Scaffold(
       // appBar: AppBar(
       //   title: Text("Topics"),
@@ -33,58 +36,27 @@ class _TopicsListScreenState extends State<TopicsListScreen> {
       //     )
       //   ],
       // ),
-      body: Container(
-          child: appState.topics == null
-              ? FutureBuilder<List<Topic>>(
-                  future: appState.fetchTopics(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return ListView.builder(
-                          itemCount: 10,
-                          itemBuilder: (context, index) {
-                            return Shimmer.fromColors(
-                                child: const EventLoadingWidget(
-                                  size: 60,
-                                ),
-                                baseColor: Colors.grey[400],
-                                highlightColor: Colors.white);
-                          });
-                    }
-                    if (snapshot.hasError) {
-                      return Padding(
-                        padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
-                        child: Align(
-                          alignment: Alignment.center,
-                          child: InkWell(
-                            child: const SizedBox(
-                                height: 30,
-                                width: 50,
-                                child: Text("Try again")),
-                            onTap: () {
-                              setState(() {});
-                            },
-                          ),
-                        ),
-                      );
-                    }
-                    if (!snapshot.hasData) {
-                      return const Padding(
-                        padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
-                        child: Align(
-                          alignment: Alignment.center,
-                          child: InkWell(
-                            child: SizedBox(
-                                height: 30,
-                                width: 50,
-                                child: Text("No data found")),
-                          ),
-                        ),
-                      );
-                    }
-                    return _buildTopicList(snapshot.data);
-                  },
-                )
-              : _buildTopicList(appState.topics)),
+      body: BlocBuilder<TopicsBloc, TopicsState>(
+        builder: (context, state) {
+          if (state.data != null) {
+            return _buildTopicList(state.data);
+          }
+          if (state.status == AppStatus.loading) {
+            return ListView.builder(
+                itemCount: 10,
+                itemBuilder: (context, index) {
+                  return Shimmer.fromColors(
+                      child: const EventLoadingWidget(
+                        size: 60,
+                      ),
+                      baseColor: Colors.grey[400],
+                      highlightColor: Colors.white);
+                });
+          }
+
+          return const Text('No Data found');
+        },
+      ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.PrimaryColor,
         onPressed: () {

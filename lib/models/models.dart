@@ -10,3 +10,4 @@ export 'topic.dart';
 export 'user.dart';
 export 'event_comment.dart';
 export 'enums.dart';
+export 'base_response.dart';

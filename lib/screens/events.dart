@@ -3,13 +3,8 @@ import 'package:vipepeo_app/models/models.dart';
 import 'package:vipepeo_app/screens/add_edit_community.dart';
 import 'package:vipepeo_app/screens/add_edit_event.dart';
 import 'package:vipepeo_app/screens/commuties_list.dart';
-import 'package:vipepeo_app/utils/app_theme.dart';
-import 'package:vipepeo_app/utils/app_utils.dart';
-import 'package:vipepeo_app/widgets/add_icon.dart';
-import 'package:vipepeo_app/widgets/category_item.dart';
-import 'package:vipepeo_app/widgets/event_type_icon.dart';
-import 'package:vipepeo_app/widgets/eventlist.dart';
-import 'package:vipepeo_app/utils/constants.dart';
+import 'package:vipepeo_app/utils/utils.dart';
+import 'package:vipepeo_app/widgets/widgets.dart';
 
 class EventListScreen extends StatefulWidget {
   const EventListScreen({Key key}) : super(key: key);
@@ -68,7 +63,7 @@ class _EventListScreenState extends State<EventListScreen> {
             ),
           ],
         ),
-        CategoryWidget(),
+        const CategoryWidget(),
         const SizedBox(
           height: 15,
         ),

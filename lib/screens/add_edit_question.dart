@@ -1,53 +1,24 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
 // import 'package:flutter_multi_chip_select/flutter_multi_chip_select.dart';
 import 'package:vipepeo_app/models/models.dart';
-import 'package:vipepeo_app/states/app_state.dart';
-import 'package:vipepeo_app/utils/app_theme.dart';
-import 'package:vipepeo_app/utils/app_utils.dart';
-import 'package:vipepeo_app/utils/constants.dart';
-import 'package:vipepeo_app/widgets/submit_button.dart';
-import 'package:vipepeo_app/widgets/textfield.with.controller.dart';
+import 'package:vipepeo_app/utils/utils.dart';
 import 'package:vipepeo_app/widgets/widgets.dart';
 
 class AddEditQuestionScreen extends StatefulWidget {
-  final Function(Question child) onQuestionAdded;
   final Question question;
 
-  const AddEditQuestionScreen({Key key, this.onQuestionAdded, this.question})
-      : super(key: key);
+  const AddEditQuestionScreen({Key key, this.question}) : super(key: key);
   @override
   _AddEditQuestionScreenState createState() => _AddEditQuestionScreenState();
 }
 
 class _AddEditQuestionScreenState extends State<AddEditQuestionScreen> {
-  List<ChildCondition> childConditions;
   List<dynamic> selectedConditions = [];
-  AppState appState;
-  bool isSubmitting = false;
 
   final TextEditingController _controller = TextEditingController();
-  @override
-  void initState() {
-    appState = Provider.of<AppState>(context, listen: false);
-    if (appState.childConditions != null) {
-      childConditions = appState.childConditions;
-    } else {
-      appState.getChildConditionsList().then((data) {
-        // print("Conditions: $data");
-        if (mounted) {
-          setState(() {
-            childConditions = data;
-          });
-        }
-      });
-    }
-    if (widget.question != null) {
-      //  appState
-    }
-    super.initState();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,10 +27,16 @@ class _AddEditQuestionScreenState extends State<AddEditQuestionScreen> {
         title: const Text("Ask a question"),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3),
-          child: Container(
-            width: double.infinity,
-            child: isSubmitting ? const LinearProgressIndicator() : Container(),
-            color: Colors.black,
+          child: BlocBuilder<QuestionsBloc, QuestionsState>(
+            builder: (context, state) {
+              return Container(
+                width: double.infinity,
+                child: state.status == AppStatus.loading
+                    ? const LinearProgressIndicator()
+                    : Container(),
+                color: Colors.black,
+              );
+            },
           ),
         ),
       ),
@@ -98,21 +75,8 @@ class _AddEditQuestionScreenState extends State<AddEditQuestionScreen> {
               ),
               SubmitButtonWidget(onPressed: () {
                 if (_validateFields()) {
-                  _showPageSubmitting(true);
-                  appState
-                      .askQuestion(
-                    _controller.text,
-                    selectedConditions,
-                  )
-                      .then((data) {
-                    appState.fetchQuestions();
-                    _showPageSubmitting(false);
-                    AppUtils.showToast("${data['response']}");
-                    print("Response: $data");
-                  }).catchError((onError) {
-                    _showPageSubmitting(false);
-                    AppUtils.showToast('Somethng went wrong');
-                  });
+                  BlocProvider.of<QuestionsBloc>(context)
+                      .add(AddQuestion(_controller.text, selectedConditions));
                 } else {
                   AppUtils.showToast(Constants.HINT_FILL_ALL_FIELDS);
                 }
@@ -126,11 +90,5 @@ class _AddEditQuestionScreenState extends State<AddEditQuestionScreen> {
 
   bool _validateFields() {
     return _controller.text.isNotEmpty;
-  }
-
-  _showPageSubmitting(bool showLoading) {
-    setState(() {
-      isSubmitting = showLoading;
-    });
   }
 }

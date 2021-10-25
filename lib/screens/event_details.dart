@@ -1,13 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:provider/provider.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
 import 'package:vipepeo_app/models/models.dart';
 import 'package:vipepeo_app/screens/add_edit_event.dart';
 import 'package:vipepeo_app/screens/event_comments.dart';
-import 'package:vipepeo_app/states/app_state.dart';
-import 'package:vipepeo_app/utils/app_theme.dart';
-import 'package:vipepeo_app/utils/app_utils.dart';
+import 'package:vipepeo_app/utils/utils.dart';
 import 'package:vipepeo_app/screens/view_full_image.dart';
 import 'package:vipepeo_app/widgets/circular_clipper.dart';
 
@@ -27,11 +26,9 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
   bool isSaved = false;
   bool isGoingLoading = false;
   bool isSavedLoading = false;
-  AppState appState;
+
   @override
   void initState() {
-    appState = Provider.of<AppState>(context, listen: false);
-    print('EventSaved: ${widget.event.isSaved}');
     isSaved = widget.event.isSaved;
     super.initState();
   }
@@ -79,12 +76,12 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   height: 380,
                   transform: Matrix4.translationValues(0.0, -50.0, 0.0),
                   child: Hero(
-                    tag: this.widget.event.photo,
+                    tag: widget.event.photo,
                     child: ClipShadowPath(
                       clipper: CircularClipper(),
-                      shadow: Shadow(blurRadius: 20.0),
+                      shadow: const Shadow(blurRadius: 20.0),
                       child: CachedNetworkImage(
-                        imageUrl: this.widget.event.photo,
+                        imageUrl: widget.event.photo,
                         imageBuilder: (context, imageProvider) => Container(
                           width: double.infinity,
                           decoration: BoxDecoration(
@@ -95,7 +92,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                         errorWidget: (context, url, data) => Container(
                             color: Colors.grey[300],
                             width: double.infinity,
-                            child: Icon(Icons.error)),
+                            child: const Icon(Icons.error)),
                       ),
                     ),
                   ),
@@ -103,7 +100,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 onTap: () {
                   AppUtils(context).nextPage(
                       page: ViewFullImageScreen(
-                    imageUrl: this.widget.event.photo,
+                    imageUrl: widget.event.photo,
                   ));
                 },
               ),
@@ -111,28 +108,33 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
                   IconButton(
-                      padding: EdgeInsets.only(left: 25.0),
-                      icon: Icon(
+                      padding: const EdgeInsets.only(left: 25.0),
+                      icon: const Icon(
                         Icons.arrow_back,
                         color: Colors.black,
                       ),
                       iconSize: 30.0,
                       onPressed: () => Navigator.pop(context)),
-                  appState.user.email == widget.event.createdBy
-                      ? IconButton(
-                          tooltip: 'Edit',
-                          icon: Icon(
-                            Icons.edit,
-                            color: Colors.black,
-                          ),
-                          onPressed: () {
-                            AppUtils(context).nextPage(
-                                page: AddEditEventScreen(
-                              event: widget.event,
-                              updateEvent: this._updateEvent,
-                            ));
-                          })
-                      : Container(),
+                  BlocBuilder<AuthBloc, AuthState>(
+                    builder: (context, state) {
+                      if (state.data.email == widget.event.createdBy) {
+                        return IconButton(
+                            tooltip: 'Edit',
+                            icon: const Icon(
+                              Icons.edit,
+                              color: Colors.black,
+                            ),
+                            onPressed: () {
+                              AppUtils(context).nextPage(
+                                  page: AddEditEventScreen(
+                                event: widget.event,
+                                updateEvent: _updateEvent,
+                              ));
+                            });
+                      }
+                      return Container();
+                    },
+                  )
                 ],
               ),
               Positioned.fill(
@@ -141,14 +143,14 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                     alignment: Alignment.bottomCenter,
                     child: RawMaterialButton(
                       elevation: 12.0,
-                      padding: EdgeInsets.all(15.0),
+                      padding: const EdgeInsets.all(15.0),
                       onPressed: () {
                         AppUtils(context).nextPage(
                             page: EventCommentsScreen(event: widget.event));
                       },
-                      shape: CircleBorder(),
+                      shape: const CircleBorder(),
                       fillColor: AppTheme.PrimaryDarkColor,
-                      child: Icon(
+                      child: const Icon(
                         Icons.comment,
                         size: 30.0,
                         color: Colors.white,
@@ -161,16 +163,16 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Icon(
+                      const Icon(
                         Icons.event_available,
                         size: 18,
                       ),
-                      SizedBox(
+                      const SizedBox(
                         width: 5,
                       ),
                       Text(
                         '${this.widget.event.startDate}',
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -181,16 +183,16 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
-                      Icon(
+                      const Icon(
                         Icons.event_busy,
                         size: 18.0,
                       ),
-                      SizedBox(
+                      const SizedBox(
                         width: 5,
                       ),
                       Text(
                         '${this.widget.event.endDate}',
-                        style: TextStyle(
+                        style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -200,7 +202,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   left: 25,
                   child: Text(
                     '${widget.event.theme}',
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
@@ -212,7 +214,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
             padding: const EdgeInsets.all(8.0),
             child: Container(
               width: MediaQuery.of(context).size.width,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.only(
                       topRight: Radius.circular(30),
@@ -226,24 +228,25 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       children: <Widget>[
                         Row(
                           children: <Widget>[
-                            Text(
+                            const Text(
                               "Speaker",
                               style:
                                   TextStyle(color: AppTheme.PrimaryDarkColor),
                             ),
-                            SizedBox(
+                            const SizedBox(
                               width: 10,
                             ),
                             Text(
-                              this.widget.event.speaker ?? "Muhammed Kasujja",
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                              widget.event.speaker ?? "Muhammed Kasujja",
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
                       ],
                     ),
                   ),
-                  SizedBox(
+                  const SizedBox(
                     height: 5,
                   ),
                   Padding(
@@ -252,12 +255,12 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        SizedBox(
+                        const SizedBox(
                           height: 5,
                         ),
                         Row(
                           children: <Widget>[
-                            Icon(
+                            const Icon(
                               FontAwesomeIcons.newspaper,
                               size: 15,
                               color: AppTheme.APP_COLOR,
@@ -265,18 +268,19 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                             Padding(
                               padding: const EdgeInsets.only(left: textPadding),
                               child: Text(
-                                this.widget.event.theme,
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                widget.event.theme,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold),
                               ),
                             ),
                           ],
                         ),
-                        SizedBox(
+                        const SizedBox(
                           height: 10,
                         ),
                         Row(
                           children: <Widget>[
-                            Icon(
+                            const Icon(
                               Icons.timer,
                               size: 15,
                               color: AppTheme.APP_COLOR,
@@ -284,16 +288,16 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                             Padding(
                               padding: const EdgeInsets.only(left: textPadding),
                               child: Text(
-                                  '''${_formatTime(this.widget.event.startTime)}  -  ${_formatTime(this.widget.event.endTime)}'''),
+                                  '''${_formatTime(widget.event.startTime)}  -  ${_formatTime(widget.event.endTime)}'''),
                             ),
                           ],
                         ),
-                        SizedBox(
+                        const SizedBox(
                           height: 10,
                         ),
                         Row(
                           children: <Widget>[
-                            Icon(
+                            const Icon(
                               Icons.location_on,
                               size: 15,
                               color: AppTheme.APP_COLOR,
@@ -301,22 +305,22 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                             Padding(
                               padding: const EdgeInsets.only(left: textPadding),
                               child: Text(
-                                  '${this.widget.event.locDistrict}, ${this.widget.event.street} '),
+                                  '${widget.event.locDistrict}, ${widget.event.street} '),
                             ),
                           ],
                         ),
-                        SizedBox(
+                        const SizedBox(
                           height: 10,
                         ),
-                        Padding(
-                          padding: const EdgeInsets.all(4.0),
+                        const Padding(
+                          padding: EdgeInsets.all(4.0),
                           child: Text('Created by'),
                         ),
                         Padding(
                           padding: const EdgeInsets.all(4.0),
                           child: Text(
                             widget.event.createdBy,
-                            style: TextStyle(color: Colors.grey),
+                            style: const TextStyle(color: Colors.grey),
                           ),
                         )
                       ],
@@ -328,7 +332,7 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: Container(
+      bottomNavigationBar: SizedBox(
         height: 40,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -339,11 +343,25 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                   children: <Widget>[
                     Container(
                       color: AppTheme.PrimaryDarkColor,
-                      padding: EdgeInsets.all(0),
+                      padding: const EdgeInsets.all(0),
                       width: double.infinity,
-                      child: OutlineButton(
-                        hoverColor: Colors.green,
-                        onPressed: _joinLeaveEvent,
+                      child: BlocListener<EventsBloc, EventsState>(
+                        listener: (context, state) {
+                          if (state.status == AppStatus.loading) {
+                            setState(() {
+                              isGoingLoading = true;
+                            });
+                          } else {
+                            if (state.status == AppStatus.loaded) {
+                              setState(() {
+                                isGoing = !isGoing;
+                              });
+                            }
+                            setState(() {
+                              isGoingLoading = false;
+                            });
+                          }
+                        },
                         child: Text(
                           isGoing ? "Attending" : 'Attend Event',
                         ),
@@ -356,14 +374,35 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
                 flex: 1,
                 child: Stack(
                   children: <Widget>[
-                    RawMaterialButton(
-                      onPressed: _saveRemoveEvent,
-                      child: Container(
-                        width: double.infinity,
-                        decoration: BoxDecoration(border: Border.all()),
-                        child: Center(
-                          child: Text(
-                            isSaved ? "Saved" : 'Save Event',
+                    BlocListener<EventsBloc, EventsState>(
+                      listener: (context, state) {
+                        if (state.status == AppStatus.loading) {
+                          setState(() {
+                            isSavedLoading = true;
+                          });
+                        } else {
+                          if (state.status == AppStatus.loaded) {
+                            setState(() {
+                              isSaved = !isSaved;
+                            });
+                          }
+                          setState(() {
+                            isGoingLoading = false;
+                          });
+                        }
+                      },
+                      child: RawMaterialButton(
+                        onPressed: () {
+                          BlocProvider.of<EventsBloc>(context)
+                              .add(SaveRemoveEvent(widget.event.id));
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(border: Border.all()),
+                          child: Center(
+                            child: Text(
+                              isSaved ? "Saved" : 'Save Event',
+                            ),
                           ),
                         ),
                       ),
@@ -378,55 +417,15 @@ class _EventDetailsScreenState extends State<EventDetailsScreen> {
     // bottomSheet: CommentWidget(onSendClicked: null));
   }
 
-  _joinLeaveEvent() {
-    setState(() {
-      isGoingLoading = true;
-    });
-    appState.attendOrDontAttendEvent(widget.event.id).then((value) {
-      print(value);
-      if (mounted)
-        setState(() {
-          isGoing = !isGoing;
-          isGoingLoading = false;
-        });
-    }).catchError((onError) {
-      if (mounted)
-        setState(() {
-          isGoingLoading = false;
-        });
-      print(onError);
-    });
-  }
-
   _saveRemoveEvent() {
-    setState(() {
-      isSavedLoading = true;
-    });
-    appState.saveRemoveEvent(widget.event.id).then((value) {
-      print(value);
-      if (mounted)
-        setState(() {
-          isSaved = !isSaved;
-          isSavedLoading = false;
-        });
-      appState.loadInitialData();
-    }).catchError((onError) {
-      if (mounted)
-        setState(() {
-          isSavedLoading = false;
-        });
-      print(onError);
-    });
+    // appState.loadInitialData();
   }
 
   Widget _loadingIcon() {
-    return Positioned.fill(
-        child: Container(
-            child: Center(
-                child: Container(
-                    width: 15,
-                    height: 15,
-                    child: CircularProgressIndicator()))));
+    return const Positioned.fill(
+        child: Center(
+            child: SizedBox(
+                width: 15, height: 15, child: CircularProgressIndicator())));
   }
 
   _updateEvent(Event event) {

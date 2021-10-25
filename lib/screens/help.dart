@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
 import 'package:vipepeo_app/models/models.dart';
-import 'package:vipepeo_app/states/app_state.dart';
-import 'package:provider/provider.dart';
 import 'package:vipepeo_app/utils/app_theme.dart';
 import 'package:vipepeo_app/utils/app_utils.dart';
 import 'package:vipepeo_app/widgets/event_loading.dart';
@@ -20,62 +20,52 @@ class _HelpScreenState extends State<HelpScreen> {
   Future<List<Question>> futureQuestions;
 
   @override
+  void initState() {
+    final _questionsBloc = BlocProvider.of<QuestionsBloc>(context);
+    // if (_questionsBloc.state.data == null) {
+    _questionsBloc.add(FetchQuestions());
+    // }
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    var appState = Provider.of<AppState>(context);
     return Scaffold(
-      body: Container(
-        child: appState.listQuestions == null
-            ? FutureBuilder<List<Question>>(
-                future: appState.fetchQuestions(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return ListView.builder(
-                        itemCount: 10,
-                        itemBuilder: (context, index) {
-                          return Shimmer.fromColors(
-                              child: const EventLoadingWidget(
-                                size: 60,
-                              ),
-                              baseColor: Colors.grey[300],
-                              highlightColor: Colors.white);
-                        });
-                  }
-                  if (snapshot.hasError) {
-                    return Padding(
-                      padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: InkWell(
-                          child: const SizedBox(
-                              height: 30, width: 50, child: Text("Try again")),
-                          onTap: () {
-                            setState(() {
-                              futureQuestions = appState.fetchQuestions();
-                            });
-                          },
-                        ),
-                      ),
-                    );
-                  }
-                  if (!snapshot.hasData) {
-                    return const Padding(
-                      padding: EdgeInsets.only(top: 8.0, bottom: 8.0),
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: InkWell(
-                          child: SizedBox(
-                              height: 30,
-                              width: 50,
-                              child: Text("No data found")),
-                        ),
-                      ),
-                    );
-                  }
-                  return _buildQuestionList(snapshot.data);
+      body:
+          BlocBuilder<QuestionsBloc, QuestionsState>(builder: (context, state) {
+        if (state.data != null) {
+          return _buildQuestionList(state.data);
+        }
+        if (state.status == AppStatus.loading) {
+          return ListView.builder(
+              itemCount: 10,
+              itemBuilder: (context, index) {
+                return Shimmer.fromColors(
+                    child: const EventLoadingWidget(
+                      size: 60,
+                    ),
+                    baseColor: Colors.grey[300],
+                    highlightColor: Colors.white);
+              });
+        }
+        if (state.status == AppStatus.failure) {
+          return Padding(
+            padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+            child: Align(
+              alignment: Alignment.center,
+              child: InkWell(
+                child: const SizedBox(
+                    height: 30, width: 50, child: Text("Try again")),
+                onTap: () {
+                  BlocProvider.of<QuestionsBloc>(context).add(FetchQuestions());
                 },
-              )
-            : _buildQuestionList(appState.listQuestions),
-      ),
+              ),
+            ),
+          );
+        }
+
+        return const Text('No Data found');
+      }),
       floatingActionButton: FloatingActionButton(
           backgroundColor: AppTheme.PrimaryColor,
           onPressed: () {

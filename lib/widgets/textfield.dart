@@ -6,19 +6,22 @@ class TextfieldWidget extends StatelessWidget {
   final String hint;
   final bool isPassword;
   final TextInputType inputType;
+  final TextEditingController controller;
 
   const TextfieldWidget(
       {Key key,
       @required this.onTextChange,
       @required this.hint,
       this.isPassword,
-      this.inputType})
+      this.inputType,
+      this.controller})
       : super(key: key);
   @override
   Widget build(BuildContext context) {
     return Column(
       children: <Widget>[
         TextField(
+          controller: controller,
           keyboardType: inputType ?? TextInputType.text,
           obscureText: isPassword ?? false,
           onChanged: onTextChange,

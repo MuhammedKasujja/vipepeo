@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
 import 'package:vipepeo_app/models/models.dart';
-import 'package:vipepeo_app/states/app_state.dart';
 import 'package:vipepeo_app/utils/app_utils.dart';
 import 'package:vipepeo_app/widgets/comment_textfield.dart';
 import 'package:vipepeo_app/widgets/loading.dart';
@@ -15,18 +15,10 @@ class EventCommentsScreen extends StatefulWidget {
 }
 
 class _EventCommentsState extends State<EventCommentsScreen> {
-  AppState appState;
-  List<EventComment> comments;
-  bool isSubmitting = false;
   @override
   void initState() {
-    appState = Provider.of<AppState>(context, listen: false);
-    appState.eventComments(widget.event.id).then((data) {
-      if (mounted)
-        setState(() {
-          comments = data;
-        });
-    });
+    BlocProvider.of<CommentsBloc>(context)
+        .add(FetchComments(widget.event.id, CommentType.event));
     super.initState();
   }
 
@@ -36,76 +28,67 @@ class _EventCommentsState extends State<EventCommentsScreen> {
         appBar: AppBar(
           title: Text(widget.event.theme),
           bottom: PreferredSize(
-            preferredSize: Size.fromHeight(3),
-            child: Container(
-              width: double.infinity,
-              child: isSubmitting ? LinearProgressIndicator() : Container(),
-              color: Colors.black,
+            preferredSize: const Size.fromHeight(3),
+            child: BlocBuilder<CommentsBloc, CommentsState>(
+              builder: (context, state) {
+                return Container(
+                  width: double.infinity,
+                  child: state.status == AppStatus.loading
+                      ? const LinearProgressIndicator()
+                      : Container(),
+                  color: Colors.black,
+                );
+              },
             ),
           ),
         ),
-        body: Container(
-          child: comments != null
-              ? comments.length > 0
-                  ? ListView.builder(
-                      itemCount: comments.length,
-                      itemBuilder: (context, index) {
-                        var comment = comments[index];
-                        return Container(
-                            margin: EdgeInsets.all(8.0),
-                            decoration: BoxDecoration(
-                                border: Border.all(width: 0.5),
-                                borderRadius: BorderRadius.circular(20)),
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                  vertical: 8, horizontal: 16),
-                              child: Text(comment.text),
-                            ));
-                      })
-                  : Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          Icon(
-                            Icons.insert_comment,
-                            color: Colors.grey[400],
-                            size: 30,
+        body: BlocBuilder<CommentsBloc, CommentsState>(
+          builder: (context, state) {
+            return Container(
+              child: state.data != null
+                  ? state.data.isNotEmpty
+                      ? ListView.builder(
+                          itemCount: state.data.length,
+                          itemBuilder: (context, index) {
+                            var comment = state.data[index];
+                            return Container(
+                                margin: const EdgeInsets.all(8.0),
+                                decoration: BoxDecoration(
+                                    border: Border.all(width: 0.5),
+                                    borderRadius: BorderRadius.circular(20)),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 8, horizontal: 16),
+                                  child: Text(comment.text),
+                                ));
+                          })
+                      : Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: <Widget>[
+                              Icon(
+                                Icons.insert_comment,
+                                color: Colors.grey[400],
+                                size: 30,
+                              ),
+                              Text(
+                                'No comments on this event',
+                                style: TextStyle(color: Colors.grey[400]),
+                              ),
+                            ],
                           ),
-                          Text(
-                            'No comments on this event',
-                            style: TextStyle(color: Colors.grey[400]),
-                          ),
-                        ],
-                      ),
-                    )
-              : LoadingWidget(),
+                        )
+                  : const LoadingWidget(),
+            );
+          },
         ),
         bottomSheet: CommentWidget(onSendClicked: (val) {
           if (val == null || val.isEmpty) {
             AppUtils.showToast('Please write something');
             return;
           }
-          _showLoading(true);
-          appState.makeEventComment(this.widget.event.id, val).then((value) {
-            appState.eventComments(widget.event.id).then((data) {
-              if (mounted)
-                setState(() {
-                  comments = data;
-                  _showLoading(false);
-                });
-            });
-            //_showLoading(false);
-          }).catchError((onError) {
-            _showLoading(false);
-            AppUtils.showToast("Error sending data");
-          });
+          BlocProvider.of<CommentsBloc>(context)
+              .add(AddComment(widget.event.id, val, CommentType.event));
         }));
-  }
-
-  _showLoading(bool isLoading) {
-    if (mounted)
-      setState(() {
-        isSubmitting = isLoading;
-      });
   }
 }

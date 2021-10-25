@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
 import 'package:vipepeo_app/data/repo.dart';
+import 'package:vipepeo_app/models/models.dart';
 import 'package:vipepeo_app/utils/app_theme.dart';
 import 'package:vipepeo_app/utils/app_utils.dart';
 import 'package:vipepeo_app/utils/constants.dart';
@@ -7,10 +10,7 @@ import 'package:vipepeo_app/widgets/submit_button.dart';
 import 'package:vipepeo_app/widgets/textfield.dart';
 
 class AddProfessionScreen extends StatefulWidget {
-  final String userToken;
-
-  const AddProfessionScreen({Key key, @required this.userToken})
-      : super(key: key);
+  const AddProfessionScreen({Key key}) : super(key: key);
   @override
   _AddProfessionScreenState createState() => _AddProfessionScreenState();
 }
@@ -34,10 +34,10 @@ class _AddProfessionScreenState extends State<AddProfessionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Add Profession"),
+        title: const Text("Add Profession"),
       ),
       body: Container(
-        padding: EdgeInsets.all(10.0),
+        padding: const EdgeInsets.all(10.0),
         child: SingleChildScrollView(
           child: Column(
             children: <Widget>[
@@ -53,12 +53,12 @@ class _AddProfessionScreenState extends State<AddProfessionScreen> {
                 controller: infoController,
                 minLines: 5,
                 maxLines: 10,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                     border: OutlineInputBorder(),
                     labelText: 'More info',
                     labelStyle: TextStyle(color: AppTheme.PrimaryDarkColor)),
               ),
-              SizedBox(
+              const SizedBox(
                 height: 10,
               ),
               TextfieldWidget(
@@ -68,17 +68,20 @@ class _AddProfessionScreenState extends State<AddProfessionScreen> {
                     });
                   },
                   hint: 'Specifications'),
-              SubmitButtonWidget(onPressed: () {
-                Repository()
-                    .addProfession(
-                        token: widget.userToken,
-                        prof: prof,
-                        spec: spec,
-                        desc: infoController.text)
-                    .then((data) {
-                  AppUtils.showToast("${data[Constants.KEY_RESPONSE]}");
-                });
-              })
+              BlocListener<AuthBloc, AuthState>(
+                listener: (context, state) {
+                  if (state.status == AppStatus.failure) {
+                    AppUtils.showToast(state.error);
+                  }
+                  if (state.status == AppStatus.loaded) {
+                    AppUtils.showToast(state.message);
+                  }
+                },
+                child: SubmitButtonWidget(onPressed: () {
+                  BlocProvider.of<AuthBloc>(context)
+                      .add(AddProfession(prof, spec, infoController.text));
+                }),
+              )
             ],
           ),
         ),

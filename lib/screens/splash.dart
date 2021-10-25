@@ -1,14 +1,18 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:vipepeo_app/screens/home.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
+import 'package:vipepeo_app/data/repo.dart';
 import 'package:vipepeo_app/screens/login.dart';
-import 'package:vipepeo_app/states/app_state.dart';
 import 'package:vipepeo_app/utils/app_theme.dart';
 import 'package:vipepeo_app/utils/constants.dart';
 
+import 'home.dart';
+
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({Key key}) : super(key: key);
+
   @override
   _SplashScreenState createState() => _SplashScreenState();
 }
@@ -17,22 +21,21 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer.periodic(Duration(seconds: 3), (t) {
-      var appState = Provider.of<AppState>(context, listen: false);
-      // print('AppStateToken: ${appState.userToken}');
-      // Repository().loadPrefs().then((map) {
-      if (appState.userToken != null) {
-        // print('RepoToken: ${appState.userToken}');
-        appState.getUserData();
-        appState.loadInitialData();
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (context) => HomeScreen()));
-      } else {
-        Navigator.pushReplacement(
-            context, MaterialPageRoute(builder: (context) => LoginScreen()));
-      }
-      // });
-      print("Loaded Page");
+    Timer.periodic(const Duration(seconds: 3), (t) {
+      Repository().loadPrefs().then((user) {
+        if (user.token != null) {
+          BlocProvider.of<AuthBloc>(context).add(GetUserProfile());
+          if (mounted) {
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (context) => const HomeScreen()));
+          }
+        } else {
+          if (mounted) {
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()));
+          }
+        }
+      });
       t.cancel();
     });
   }
@@ -47,7 +50,7 @@ class _SplashScreenState extends State<SplashScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
+            children: const <Widget>[
               Text(
                 Constants.APP_NAME,
                 style:

@@ -1,17 +1,19 @@
-class Constants{
+// ignore_for_file: constant_identifier_names
+
+class Constants {
   Constants._();
   static const APP_NAME = "Vipepeo";
   static const ARTICLES = "Articles";
   static const ASK = "Ask";
-  static const NOTIFICATIONS ="Notifications";
+  static const NOTIFICATIONS = "Notifications";
   static const HOME = "Home";
   static const REGISTER = "Register";
-  static const LOGIN ="Login";
-  static const EDIT_PROFILE ="Edit Profile";
-  static const PROFILE ="Profile";
+  static const LOGIN = "Login";
+  static const EDIT_PROFILE = "Edit Profile";
+  static const PROFILE = "Profile";
   static const ADD_PROFFESION = "Add Proffesion";
-  static const EVENT_TYPE_SAVED ="Saved";
-  static const EVENT_TYPE_SUGGESTED ="Suggested";
+  static const EVENT_TYPE_SAVED = "Saved";
+  static const EVENT_TYPE_SUGGESTED = "Suggested";
   static const EVENT_TYPE_GOING = "Going";
   static const HINT_EMAIL = "Email";
   static const HINT_NAME = "Name";
@@ -31,7 +33,6 @@ class Constants{
   static const KEY_CODE = "code";
   static const KEY_RESPONSE = "response";
   static const KEY_ERROR = "error";
-  static const KEY_TOKEN = "token";
   static const KEY_EMAIL = 'email';
-  static const KEY_PROFILE_PHOTO ="profile_photo";
+  static const KEY_PROFILE_PHOTO = "profile_photo";
 }

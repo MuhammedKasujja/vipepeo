@@ -1,17 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geocoding/geocoding.dart';
 // import 'package:flutter_multi_chip_select/flutter_multi_chip_select.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:provider/provider.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
 import 'package:vipepeo_app/models/models.dart';
-import 'package:vipepeo_app/states/app_state.dart';
-import 'package:vipepeo_app/utils/app_theme.dart';
-import 'package:vipepeo_app/utils/app_utils.dart';
-import 'package:vipepeo_app/utils/constants.dart';
-import 'package:vipepeo_app/widgets/country_dropdown.dart';
-import 'package:vipepeo_app/widgets/submit_button.dart';
-import 'package:vipepeo_app/widgets/textfield.with.controller.dart';
+import 'package:vipepeo_app/utils/utils.dart';
 import 'package:vipepeo_app/widgets/widgets.dart';
 
 class AddCommunityScreen extends StatefulWidget {
@@ -26,7 +21,6 @@ class AddCommunityScreen extends StatefulWidget {
 
 class _AddCommunityScreenState extends State<AddCommunityScreen> {
   String _country = 'UG';
-  bool isSubmitting = false;
   String cachedFilePath;
   var photo;
   final _locationController = TextEditingController();
@@ -34,7 +28,6 @@ class _AddCommunityScreenState extends State<AddCommunityScreen> {
   final _nameController = TextEditingController();
   List<ChildCondition> childConditions;
   List<dynamic> selectedConditions = [];
-  AppState appState;
   // final _multiSelectKey = GlobalKey<MultiSelectDropdownState>();
 
   Future<void> _onLookupCoordinatesPressed(
@@ -66,18 +59,9 @@ class _AddCommunityScreenState extends State<AddCommunityScreen> {
       });
     }
     _getUserPosition();
-    appState = Provider.of<AppState>(context, listen: false);
-    if (appState.childConditions != null) {
-      childConditions = appState.childConditions;
-    } else {
-      appState.getChildConditionsList().then((data) {
-        // print("Conditions: $data");
-        if (mounted) {
-          setState(() {
-            childConditions = data;
-          });
-        }
-      });
+    final _childConditionsBloc = BlocProvider.of<ChildConditionsBloc>(context);
+    if (_childConditionsBloc.state.data == null) {
+      _childConditionsBloc.add(FetchChildConditions());
     }
 
     super.initState();
@@ -97,10 +81,16 @@ class _AddCommunityScreenState extends State<AddCommunityScreen> {
             Text(widget.community != null ? 'Edit Community' : "Add Community"),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(3),
-          child: Container(
-            width: double.infinity,
-            child: isSubmitting ? const LinearProgressIndicator() : Container(),
-            color: Colors.black,
+          child: BlocBuilder<GroupsBloc, GroupsState>(
+            builder: (context, state) {
+              return Container(
+                width: double.infinity,
+                child: state.status == AppStatus.loading
+                    ? const LinearProgressIndicator()
+                    : Container(),
+                color: Colors.black,
+              );
+            },
           ),
         ),
       ),
@@ -170,18 +160,29 @@ class _AddCommunityScreenState extends State<AddCommunityScreen> {
                   const SizedBox(
                     height: 15,
                   ),
-                  SubmitButtonWidget(
-                      hint:
-                          widget.community != null ? 'Save Changes' : 'Submit',
-                      onPressed: () {
-                        if (widget.community != null) {
-                          _saveData(
-                              postType: PostData.Update,
-                              communityId: widget.community.id);
-                        } else {
-                          _saveData(postType: PostData.Save);
-                        }
-                      })
+                  BlocListener<GroupsBloc, GroupsState>(
+                    listener: (context, state) {
+                      if (state.status == AppStatus.failure) {
+                        AppUtils.showToast(state.error);
+                      }
+                      if (state.status == AppStatus.loaded) {
+                        AppUtils.showToast(state.message);
+                      }
+                    },
+                    child: SubmitButtonWidget(
+                        hint: widget.community != null
+                            ? 'Save Changes'
+                            : 'Submit',
+                        onPressed: () {
+                          if (widget.community != null) {
+                            _saveData(
+                                postType: PostData.Update,
+                                communityId: widget.community.id);
+                          } else {
+                            _saveData(postType: PostData.Save);
+                          }
+                        }),
+                  )
                 ],
               ),
             ),
@@ -208,43 +209,12 @@ class _AddCommunityScreenState extends State<AddCommunityScreen> {
     super.dispose();
   }
 
-  Widget _checklistConditions() {
-    return ListView.builder(
-        itemCount: childConditions.length,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemBuilder: (context, index) {
-          return CheckboxListTile(
-              activeColor: AppTheme.PrimaryDarkColor,
-              title: Text(childConditions[index].name),
-              value: selectedConditions.contains(childConditions[index].id),
-              onChanged: (val) {
-                setState(() {
-                  if (selectedConditions.contains(childConditions[index].id)) {
-                    selectedConditions.remove(childConditions[index].id);
-                  } else {
-                    selectedConditions.add(childConditions[index].id);
-                  }
-                });
-                // print(selectedConditions);
-              });
-        });
-  }
-
   _initialData(Community community) {
     print(community.topics);
     _nameController.text = community.name;
     _descriptionController.text = community.description;
     _locationController.text = community.locDistrict;
     selectedConditions = List<int>.from(community.topics);
-  }
-
-  void _showLoading(bool isLoading) {
-    if (mounted) {
-      setState(() {
-        isSubmitting = isLoading;
-      });
-    }
   }
 
   void _saveData({PostData postType, communityId}) {
@@ -257,7 +227,6 @@ class _AddCommunityScreenState extends State<AddCommunityScreen> {
       filePath = photo.path;
     }
     if (_validateFields()) {
-      _showLoading(true);
       var community = Community(
           name: _nameController.text,
           description: _descriptionController.text,
@@ -267,22 +236,8 @@ class _AddCommunityScreenState extends State<AddCommunityScreen> {
           country: _country,
           image: filePath);
 
-      appState
-          .addEditCommunity(community,
-              postType: postType, communityId: communityId)
-          .then((data) {
-        print('Data: $data');
-        _showLoading(false);
-        if (widget.community != null) widget.updateCommunity(community);
-        // _updateCommunity();
-        AppUtils.showToast('${data[Constants.KEY_RESPONSE]}');
-
-        // appState.getMyGroups();
-      }).catchError((onError) {
-        _showLoading(false);
-        AppUtils.showToast("Please check your internet connection");
-        print("Error: $onError");
-      });
+      BlocProvider.of<GroupsBloc>(context).add(AddEditGroup(community,
+          postType: postType, communityId: communityId));
     } else {
       AppUtils.showToast(Constants.HINT_FILL_ALL_FIELDS);
     }

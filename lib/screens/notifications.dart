@@ -1,8 +1,8 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:vipepeo_app/blocs/blocs.dart';
 import 'package:vipepeo_app/models/models.dart';
-import 'package:vipepeo_app/states/app_state.dart';
 import 'package:vipepeo_app/widgets/loading.dart';
 
 class NotificationsScreen extends StatefulWidget {
@@ -15,30 +15,30 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
+    BlocProvider.of<NotificationsBloc>(context).add(FetchNotifications());
     super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // appBar: AppBar(
-      //   title: Text("Notifications"),
-      // ),
-      body: FutureBuilder<List<NotificationModel>>(
-        future: Provider.of<AppState>(context).fetchNotifications(),
-        builder: (BuildContext context,
-            AsyncSnapshot<List<NotificationModel>> snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const LoadingWidget();
-          }
-          if (snapshot.hasError) {
-            return const Text('Try Again');
-          }
+        // appBar: AppBar(
+        //   title: Text("Notifications"),
+        // ),
+        body: BlocBuilder<NotificationsBloc, NotificationsState>(
+      builder: (context, state) {
+        if (state.status == AppStatus.loading) {
+          return const LoadingWidget();
+        }
+        if (state.status == AppStatus.failure) {
+          return const Text('Try Again');
+        }
+        if (state.data != null) {
           return ListView.builder(
-              itemCount: snapshot.data.length,
+              itemCount: state.data.length,
               itemBuilder: (context, index) {
                 // var bgColor = (index%2 ==0 ) ? Colors.blue[50] : Colors.white;
-                var notification = snapshot.data[index];
+                var notification = state.data[index];
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12.0),
                   child: Row(
@@ -102,8 +102,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ),
                 );
               });
-        },
-      ),
-    );
+        }
+        return Container();
+      },
+    ));
   }
 }
